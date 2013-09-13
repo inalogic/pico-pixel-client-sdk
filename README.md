@@ -12,18 +12,20 @@ In C/C++, printing text to the console is quite easy:
 printf("Hello World!");
 ```
 
-This SDK let you do the same but with raw image data. You no longer need to save your
-images to the disk before you can view them. With this SDK, Pico Pixel will display your
-images for you in a clean, fast and simple user interface designed with graphics engineers in mind.
+This SDK let you do the same but with raw image data. No need to save images to files first.
+Just send them over to Pico Pixel and they will be displayed. Pico Pixel lets you explore the data
+in your images in a fast, clean and simple environment. Additionally, Pico Pixel can save your images to files
+if you want.
 
 In its simplest form, you would use the SDK like this:
 
 ```cpp
-PixelPrintf(image_info, raw_image_data);
+PicoPixelClient pico_pixel_client("GlxGears");
+pico_pixel_client.PixelPrintf(image_info, raw_image_data);
 ```
 
 Pico Pixel has additional support to make it very easy to get raw image data out of your programs
-with just a click.
+with just a mouse click.
 
 Integration
 -----------
@@ -44,7 +46,7 @@ pico_pixel_client.StartConnection();
 
 After the connection to Pico Pixel desktop application is made, you cmay send raw image data like this:
 ```cpp
-PixelPrintf("Test Image",                   // image name to appear in Pico Pixel desktop application
+PixelPrintf("color-framebuffer",            // image name to appear in Pico Pixel desktop application
     PicoPixelClient::PIXEL_FORMAT_BGR8,     // image pixel data format
     400,                                    // image width
     300,                                    // image height
@@ -83,7 +85,7 @@ PicoPixelClient pico_pixel_client("GlxGears");
 pico_pixel_client.StartConnection();
 
 // the last parameter '0' means the marker use_count is 0.
-int marker = pico_pixel_client.AddMarker(std::string("Color Buffer"), 0);
+int marker = pico_pixel_client.AddMarker(std::string("Color Framebuffer"), 0);
 
 // Send the defined markers to PicoPixel desktop application
 pico_pixel_client.SendMarkersToPicoPixel();
@@ -95,7 +97,7 @@ Here is how you use a marker with PixelPrintf:
 
 // The image is sent if and only if the marker's use_count is not 0.
 // A marker's use_count is decremented each time the marker is used, until it reaches 0.
-PixelPrintf(marker, "Test Image",           // image name to appear in Pico Pixel desktop application
+PixelPrintf(marker, "color-framebuffer",    // image name to appear in Pico Pixel desktop application
     PicoPixelClient::PIXEL_FORMAT_BGR8,     // image pixel data format
     400,                                    // image width
     300,                                    // image height
