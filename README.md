@@ -30,7 +30,7 @@ with just a mouse click.
 Integration
 -----------
 The SDK is written in C++ and is made of 3 files:
-  - PicoPixelClient.h           - Pico Pixel Client programing interface
+  - PicoPixelClient.h           - Pico Pixel Client programming interface
   - PicoPixelClient.cpp         - Pico Pixel Client code you need to build with your program
   - PicoPixelClientProtocol.h   - Communication interface between Pico Pixel and your program
 
@@ -44,7 +44,7 @@ PicoPixelClient pico_pixel_client("GlxGears");
 pico_pixel_client.StartConnection();
 ```
 
-After the connection to Pico Pixel desktop application is made, you cmay send raw image data like this:
+After the connection to Pico Pixel desktop application is made, you may send raw image data like this:
 ```cpp
 PixelPrintf("color-framebuffer",            // image name to appear in Pico Pixel desktop application
     PicoPixelClient::PIXEL_FORMAT_BGR8,     // image pixel data format
@@ -113,16 +113,17 @@ The tech behind PixelPrintf
 Pico Pixel Client SDK implements a network client interface to communicate with Pico Pixel desktop application.
 Pico Pixel desktop application waits for client connection on port 2001.
 
-In the example program comming with this SDK, sending image data is done from the program's main thread. However
+In the example program coming with this SDK, sending image data is done from the program's main thread. However
 you are free to call PixelPrintf from any thread in your program.
 
 Pico Pixel client SDK is open source
 ------------------------------------
-You can see everything that happens in a call to PixelPrintf. Your images are going directky to Pico Pixel desktop
+You can see everything that happens in a call to PixelPrintf. Your images are going directly to Pico Pixel desktop
 application and no further!
 
-You may modify the SDK to fit your development environment. And feel free to proposes patches and features you would
+You may modify the SDK to fit your development environment. And feel free to propose patches and features you would
 like to see in [Pico Pixel]
 
 
 [Pico Pixel]: https://pixelandpolygon.com
+
