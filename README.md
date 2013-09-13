@@ -4,7 +4,7 @@ Pico Pixel Client SDK
 [Pico Pixel] is a texture viewer for graphics engineers. It lets you view many image format types such as PNG,
 JPEG, DXT, HDR, KTX, OpenEXR and more.
 
-This SDK provides a new way of viewing a program's raw images data. 
+This SDK provides a new way of viewing program's raw image data. 
 
 In C/C++, printing text to the console is quite easy:
 
