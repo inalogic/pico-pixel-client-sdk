@@ -1,7 +1,8 @@
 Pico Pixel Client SDK
 =========
 
-[Pico Pixel] is a texture viewer for graphics engineers. It lets you view many image format type such as png, jpeg, DXT, HDR, KTX, OpenEXR and more.
+[Pico Pixel] is a texture viewer for graphics engineers. It lets you view many image format type such as png,
+jpeg, DXT, HDR, KTX, OpenEXR and more.
 
 This SDK provides a new way of viewing a program's raw images data. 
 
@@ -11,26 +12,30 @@ In C/C++, printing text to the console is quite easy:
 printf("Hello World!");
 ```
 
-This SDK let you do the same but with raw image data. You no longer need to save your images to the disk before you can view them. With this SDK, Pico Pixel will display your m=images for you in a clean, fast and simple user interface designed with graphics engineers in mind.
+This SDK let you do the same but with raw image data. You no longer need to save your
+images to the disk before you can view them. With this SDK, Pico Pixel will display your
+images for you in a clean, fast and simple user interface designed with graphics engineers in mind.
 
 In its simplest form, you would use the SDK like this:
 
 ```cpp
-PixelPrintF(image_info, raw_image_data);
+PixelPrintf(image_info, raw_image_data);
 ```
 
-Pico Pixel as additional support to make it very easy to get any raw image data from you running program with just a click.
+Pico Pixel has additional support to make it very easy to get raw image data out of your programs
+with just a click.
 
-Integration with your programs
-------------------------------
+Integration
+-----------
 The SDK is written in C++ and is made of 3 files:
   - PicoPixelClient.h           - Pico Pixel Client programing interface
   - PicoPixelClient.cpp         - Pico Pixel Client code you need to build with your program
   - PicoPixelClientProtocol.h   - Communication interface between Pico Pixel and your program
 
-Using PixelPrintF
+Using PixelPrintf
 -----------------
-Before you can use PixelPrintF calls to send image raw data to Pico Pixel you must first initialize the client interface and open a network connection to Pico Pixel desktop application.
+Before you can use PixelPrintf calls to send image raw data to Pico Pixel you must first initialize the
+client interface and open a network connection to Pico Pixel desktop application.
 
 ```cpp
 PicoPixelClient pico_pixel_client("GlxGears");
@@ -39,7 +44,7 @@ pico_pixel_client.StartConnection();
 
 After the connection to Pico Pixel desktop application is made, you cmay send raw image data like this:
 ```cpp
-PixelPrintF("Test Image",                   // image name to appear in Pico Pixel desktop application
+PixelPrintf("Test Image",                   // image name to appear in Pico Pixel desktop application
     PicoPixelClient::PIXEL_FORMAT_BGR8,     // image pixel data format
     400,                                    // image width
     300,                                    // image height
@@ -50,16 +55,21 @@ PixelPrintF("Test Image",                   // image name to appear in Pico Pixe
     );
 ```
 
-You can do more with PixelPrintF
+You can do more with PixelPrintf
 --------------------------------
-In the previous section, the call to PixelPrintF sends an image raw data to Pico Pixel desktop application every time. For instance if you are calling PixelPrintF inside a loop, the image will be sent continously as long as the code is iterating through the loop. This maybe undesirable and unnecessary.
+In the previous section, the call to PixelPrintf sends an image raw data to Pico Pixel desktop application
+every time. For instance if you are calling PixelPrintf inside a loop, the image will be sent continously as
+long as the code is iterating through the loop. This maybe undesirable and unnecessary.
 
 Fortunately, Pico Pixel has a solution. You can declare makers in your code!
 
-Markers are objects used by PixelPrintF to decide whether to send a pixel data to Pico Pixel or not.
-A marker has an associated __*use_count*__ (positive value). As long as a marker's use_count is greater than 0, any call to send data with that marker will be carried through. Each time the marker is used, its __*use_count*__ is decremented by 1.
+Markers are objects used by PixelPrintf to decide whether to send a pixel data to Pico Pixel or not.
+A marker has an associated __*use_count*__ (positive value). As long as a marker's use_count is greater
+than 0, any call to send data with that marker will be carried through. Each time the marker is used,
+its __*use_count*__ is decremented by 1.
 
-When a marker __*use_count*__ reaches zero, the marker can no longer be use to send data to Pico Pixel. Its __*use_count*__ has to be reloaded before it can be used again. 
+When a marker __*use_count*__ reaches zero, the marker can no longer be use to send data to Pico Pixel.
+Its __*use_count*__ has to be reloaded before it can be used again. 
 
 Reloading a marker is done through Pico Pixel destop application interface.
 
@@ -79,13 +89,13 @@ int marker = pico_pixel_client.AddMarker(std::string("Color Buffer"), 0);
 pico_pixel_client.SendMarkersToPicoPixel();
 ```
 
-Here is how you use a marker with PixelPrintF:
+Here is how you use a marker with PixelPrintf:
 
 ```cpp
 
 // The image is sent if and only if the marker's use_count is not 0.
 // A marker's use_count is decremented each time the marker is used, until it reaches 0.
-PixelPrintF(marker, "Test Image",           // image name to appear in Pico Pixel desktop application
+PixelPrintf(marker, "Test Image",           // image name to appear in Pico Pixel desktop application
     PicoPixelClient::PIXEL_FORMAT_BGR8,     // image pixel data format
     400,                                    // image width
     300,                                    // image height
@@ -96,17 +106,21 @@ PixelPrintF(marker, "Test Image",           // image name to appear in Pico Pixe
     );
 ```
 
-The tech behind PixelPrintF
+The tech behind PixelPrintf
 ---------------------------
-Pico Pixel Client SDK implements a network client interface to communicate with Pico Pixel desktop application. Pico Pixel desktop application waits for client connection on port 2001.
+Pico Pixel Client SDK implements a network client interface to communicate with Pico Pixel desktop application.
+Pico Pixel desktop application waits for client connection on port 2001.
 
-In the example program comming with this SDK, sending image data is done from the program's main thread. However you are free to call PixelPrintf from any thread in your program.
+In the example program comming with this SDK, sending image data is done from the program's main thread. However
+you are free to call PixelPrintf from any thread in your program.
 
 Pico Pixel client SDK is open source
 ------------------------------------
-You can see everything that happens in a call to PixelPrintF. Your images are going directky to Pico Pixel desktop application and no further!
+You can see everything that happens in a call to PixelPrintf. Your images are going directky to Pico Pixel desktop
+application and no further!
 
-You may modify the SDK to fit your development environment. And feel free to proposes patches and features you would like to see in [Pico Pixel]
+You may modify the SDK to fit your development environment. And feel free to proposes patches and features you would
+like to see in [Pico Pixel]
 
 
 [Pico Pixel]: https://pixelandpolygon.com
