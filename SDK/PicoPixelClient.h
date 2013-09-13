@@ -68,7 +68,7 @@ public:
 
       @return Returns true is the pixel data was sent successfully.
   */
-  bool PixelPrintF(const ImageInfo& image_info, char* data);
+  bool PixelPrintf(const ImageInfo& image_info, char* data);
 
   /*!
       Sends an image raw data to PicoPixel.
@@ -83,7 +83,7 @@ public:
 
       @return Returns true is the pixel data was sent successfully.
   */
-  bool PixelPrintF(std::string image_name,
+  bool PixelPrintf(std::string image_name,
     PixelFormat pixel_format,
     int width,
     int height,
@@ -100,7 +100,7 @@ public:
 
       @return Returns true is the pixel data was sent successfully.
   */
-  bool PixelPrintF(int marker_index, const ImageInfo& image_info, char* data);
+  bool PixelPrintf(int marker_index, const ImageInfo& image_info, char* data);
 
   /*!
       Sends an image raw data to PicoPixel.
@@ -115,7 +115,7 @@ public:
 
       @return Returns true is the pixel data was sent successfully.
   */
-  bool PixelPrintF(int marker_index,
+  bool PixelPrintf(int marker_index,
     std::string image_name,
     PixelFormat pixel_format,
     int width,
@@ -124,6 +124,12 @@ public:
     BOOL srgb,
     BOOL upside_down,
     char* data);
+
+#ifdef PICO_PIXEL_CLIENT_OPENGL
+  // Experimental
+  bool PixelPrintfGLColorBuffer(int marker_index, std::string image_name, BOOL upside_down);
+  bool PixelPrintfGLDepthBuffer(int marker_index, std::string image_name, BOOL upside_down);
+#endif
 
 private:
   struct Impl;

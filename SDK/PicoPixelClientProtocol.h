@@ -14,13 +14,13 @@ enum PackageType
 };
 
 #pragma pack(push, 4)
-struct PixelPrintFProtocol
+struct PixelPrintfProtocol
 {
   int      picomagic;
   int      payload_type;
   int      picoversion;
   int      isbigendian;
-  PixelPrintFProtocol()
+  PixelPrintfProtocol()
   {
     picomagic = PICO_PIXEL_NET_SIGNATURE;
     payload_type = PackageType::PACKAGE_TYPE_UNKNOWN;
@@ -30,7 +30,7 @@ struct PixelPrintFProtocol
   }
 };
 
-struct HandShakeHeader: PixelPrintFProtocol
+struct HandShakeHeader: PixelPrintfProtocol
 {
   int      size; // Size of a null terminated string. Not including the null character.
   HandShakeHeader()
@@ -40,7 +40,7 @@ struct HandShakeHeader: PixelPrintFProtocol
   }
 };
 
-struct PixelInfoHeader: PixelPrintFProtocol
+struct PixelInfoHeader: PixelPrintfProtocol
 {
   int     width;
   int     height;
@@ -64,7 +64,7 @@ struct PixelInfoHeader: PixelPrintFProtocol
   // [image raw data]       (size bytes)
 };
 
-struct MarkerDataHeader: PixelPrintFProtocol
+struct MarkerDataHeader: PixelPrintfProtocol
 {
   int marker_count;
   MarkerDataHeader()

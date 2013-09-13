@@ -1,3 +1,5 @@
+//#define PICO_PIXEL_CLIENT_OPENGL
+
 #include "PicoPixelClient.h"
 #include "PicoPixelClientProtocol.h"
 #include <process.h>
@@ -155,7 +157,7 @@ DWORD PicoPixelClient::Impl::ReceiverThread(void* ptr)
 
     if (res > 0)
     {
-      PixelPrintFProtocol* pixel_printf_header = (PixelPrintFProtocol*)receive_buffer;
+      PixelPrintfProtocol* pixel_printf_header = (PixelPrintfProtocol*)receive_buffer;
 
       if ((pixel_printf_header->picomagic == PICO_PIXEL_NET_SIGNATURE) && (pixel_printf_header->payload_type == PackageType::PACKAGE_TYPE_MARKER))
       {
@@ -198,7 +200,6 @@ DWORD PicoPixelClient::Impl::ReceiverThread(void* ptr)
 
           if (index < (int)pixel_printf->impl_->markers_.size())
           {
-            printf("value: %d\n", use_count);
             if (pixel_printf->impl_->markers_auto_sync_)
             {
               pixel_printf->impl_->markers_[index].use_count_ = use_count;
@@ -637,7 +638,7 @@ void PicoPixelClient::SendMarkersToPicoPixel()
   }
 }
 
-bool PicoPixelClient::PixelPrintF(int marker_index, const ImageInfo& image_info, char* data)
+bool PicoPixelClient::PixelPrintf(int marker_index, const ImageInfo& image_info, char* data)
 {
   int marker_count = (int) impl_->markers_.size();
   if (marker_index >= marker_count)
@@ -648,13 +649,13 @@ bool PicoPixelClient::PixelPrintF(int marker_index, const ImageInfo& image_info,
 
   --impl_->markers_[marker_index].use_count_;
 
-  return PixelPrintF(image_info, data);
+  return PixelPrintf(image_info, data);
 
 }
 
-bool PicoPixelClient::PixelPrintF(const ImageInfo& image_info, char* data)
+bool PicoPixelClient::PixelPrintf(const ImageInfo& image_info, char* data)
 {
-  return PixelPrintF(
+  return PixelPrintf(
     image_info.image_name,
     image_info.pixel_format,
     image_info.width,
@@ -665,7 +666,7 @@ bool PicoPixelClient::PixelPrintF(const ImageInfo& image_info, char* data)
     data);
 }
 
-bool PicoPixelClient::PixelPrintF(std::string image_name,
+bool PicoPixelClient::PixelPrintf(std::string image_name,
                                   PicoPixelClient::PixelFormat pixel_format,
                                   int width,
                                   int height,
@@ -708,14 +709,14 @@ bool PicoPixelClient::PixelPrintF(std::string image_name,
   bool success = impl_->SendRaw((const char*)&pixel_info, sizeof(PixelInfoHeader));
   if (success == false)
   {
-    printf("[PixelPrintF] Failed to send data to Pico Pixel server.");
+    printf("[PixelPrintf] Failed to send data to Pico Pixel server.");
     return false;
   }
 
   success = impl_->SendString(network_image_name);
   if (success == false)
   {
-    printf("[PixelPrintF] Failed to send data to Pico Pixel server.");
+    printf("[PixelPrintf] Failed to send data to Pico Pixel server.");
     return false;
   }
 
@@ -723,13 +724,13 @@ bool PicoPixelClient::PixelPrintF(std::string image_name,
   success = impl_->SendRaw(data, size);
   if (success == false)
   {
-    printf("[PixelPrintF] Failed to send data to Pico Pixel server.");
+    printf("[PixelPrintf] Failed to send data to Pico Pixel server.");
     return false;
   }
   return true;
 }
 
-bool PicoPixelClient::PixelPrintF(int marker_index,
+bool PicoPixelClient::PixelPrintf(int marker_index,
                                   std::string image_name,
                                   PixelFormat pixel_format,
                                   int width,
@@ -748,7 +749,7 @@ bool PicoPixelClient::PixelPrintF(int marker_index,
 
   --impl_->markers_[marker_index].use_count_;
 
-  return PixelPrintF(
+  return PixelPrintf(
     image_name,
     pixel_format,
     width,
@@ -759,3 +760,68 @@ bool PicoPixelClient::PixelPrintF(int marker_index,
     data);
 }
 
+
+#ifdef PICO_PIXEL_CLIENT_OPENGL
+// Experimental
+#include <GL/gl.h>
+
+bool PicoPixelClient::PixelPrintfGLColorBuffer(int marker_index, std::string image_name, BOOL upside_down)
+{
+  int pack_align = 1;
+  int viewport[4];
+  glGetIntegerv(GL_VIEWPORT, viewport);
+  int x = viewport[0];
+  int y = viewport[1];
+  int width = viewport[2];
+  int height = viewport[3];
+
+  int color_byte_size = 4;
+  glGetIntegerv(GL_PACK_ALIGNMENT, &pack_align);
+  GLsizei pitch = width*color_byte_size + (pack_align - 1) & ~(pack_align - 1);
+
+  char* color_buffer = new char[pitch*height];
+
+  glReadPixels(x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, color_buffer);
+  bool ret = PixelPrintf(marker_index, image_name,
+    PicoPixelClient::PIXEL_FORMAT_RGBA8,
+    width,
+    height,
+    pitch,
+    FALSE,
+    upside_down,
+    color_buffer);
+  delete [] color_buffer;
+
+  return ret;
+}
+
+bool PicoPixelClient::PixelPrintfGLDepthBuffer(int marker_index, std::string image_name, BOOL upside_down)
+{
+  int pack_align = 1;
+  int viewport[4];
+  glGetIntegerv(GL_VIEWPORT, viewport);
+  int x = viewport[0];
+  int y = viewport[1];
+  int width = viewport[2];
+  int height = viewport[3];
+
+  int depth_byte_size = 4;
+  glGetIntegerv(GL_PACK_ALIGNMENT, &pack_align);
+  GLsizei pitch = width*depth_byte_size + (pack_align - 1) & ~(pack_align - 1);
+
+  char* depth_buffer = new char[pitch*height];
+
+  glReadPixels(x, y, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, depth_buffer);
+  bool ret = PixelPrintf(marker_index, image_name,
+    PicoPixelClient::PIXEL_FORMAT_DEPTH,
+    width,
+    height,
+    pitch,
+    FALSE,
+    upside_down,
+    depth_buffer);
+  delete [] depth_buffer;
+
+  return ret;
+}
+#endif
