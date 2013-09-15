@@ -97,7 +97,9 @@ Here is how you use a marker with PixelPrintf:
 
 // The image is sent if and only if the marker's use_count is not 0.
 // A marker's use_count is decremented each time the marker is used, until it reaches 0.
-PixelPrintf(marker, "color-framebuffer",    // image name to appear in Pico Pixel desktop application
+pico_pixel_client.PixelPrintf(
+    marker,                                 // data marker
+    "color-framebuffer",                    // image name to appear in Pico Pixel desktop application
     PicoPixelClient::PIXEL_FORMAT_BGR8,     // image pixel data format
     400,                                    // image width
     300,                                    // image height
