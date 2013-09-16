@@ -1,7 +1,7 @@
 Pico Pixel Client SDK
 =========
 
-[Pico Pixel] is a texture viewer for graphics engineers. It lets you view many image format types such as PNG,
+[Pico Pixel] is a texture viewer for software developers. It lets you view many image format types such as PNG,
 JPEG, DXT, HDR, KTX, OpenEXR and more.
 
 This SDK provides a new way of viewing program's raw image data. 
@@ -65,15 +65,16 @@ long as the code is iterating through the loop. This maybe undesirable and unnec
 
 Fortunately, Pico Pixel has a solution. You can declare makers in your code!
 
-Markers are objects used by PixelPrintf to decide whether to send a pixel data to Pico Pixel or not.
-A marker has an associated __*use_count*__ (positive value). As long as a marker's use_count is greater
-than 0, any call to send data with that marker will be carried through. Each time the marker is used,
-its __*use_count*__ is decremented by 1.
+Markers are objects used by PixelPrintf to trace the source of raw image data in your code and decide whether to send
+the data to Pico Pixel or not.
+A marker has an associated counter of integer values. While a counter value is greater
+than 0, any call to send data with tha associated marker will be carried through. Each time a marker is used,
+its counter value is decremented by 1.
 
-When a marker __*use_count*__ reaches zero, the marker can no longer be use to send data to Pico Pixel.
-Its __*use_count*__ has to be reloaded before it can be used again. 
+When a marker's counter value reaches zero, the marker can no longer be use to send data to Pico Pixel.
+Its counter value has to be reloaded before it can be used again. 
 
-Reloading a marker is done through Pico Pixel destop application interface.
+Reloading a marker's counter is done through Pico Pixel destop application interface.
 
 ![alt tag](https://raw.github.com/username/projectname/branch/path/to/img.png)
 
