@@ -86,7 +86,7 @@ PicoPixelClient pico_pixel_client("GlxGears");
 pico_pixel_client.StartConnection();
 
 // the last parameter '0' means the marker use_count is 0.
-int marker = pico_pixel_client.AddMarker(std::string("Color Framebuffer"), 0);
+int marker = pico_pixel_client.CreateMarker(std::string("Color Framebuffer"), 0);
 
 // Send the defined markers to PicoPixel desktop application
 pico_pixel_client.SendMarkersToPicoPixel();
