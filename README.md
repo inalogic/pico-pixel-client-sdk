@@ -76,8 +76,6 @@ Its counter value has to be reloaded before it can be used again.
 
 Reloading a marker's counter is done through Pico Pixel destop application interface.
 
-![alt tag](https://raw.github.com/username/projectname/branch/path/to/img.png)
-
 Here is how you define a marker in your code:
 
 ```cpp
@@ -110,6 +108,8 @@ pico_pixel_client.PixelPrintf(
     raw_data                                // char* pointer to the image raw data
     );
 ```
+
+![alt tag](https://raw.github.com/inalogic/pico-pixel-client-sdk/master/Pictures/PicoPixelClient.png)
 
 The tech behind PixelPrintf
 ---------------------------
