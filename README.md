@@ -109,7 +109,7 @@ pico_pixel_client.PixelPrintf(
     );
 ```
 
-![alt tag](https://raw.github.com/inalogic/pico-pixel-client-sdk/master/Pictures/PicoPixelClient.png)
+![alt tag](https://raw.github.com/inalogic/pico-pixel-client-sdk/master/Pictures/pico-pixel-client.png)
 
 The tech behind PixelPrintf
 ---------------------------
