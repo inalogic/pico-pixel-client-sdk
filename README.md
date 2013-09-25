@@ -1,3 +1,4 @@
+![alt tag](https://raw.github.com/inalogic/pico-pixel-client-sdk/master/Pictures/pico-pixel.png)
 Pico Pixel Client SDK
 =========
 
