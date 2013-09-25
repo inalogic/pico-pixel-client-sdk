@@ -20,9 +20,8 @@ public:
     PIXEL_FORMAT_RGB8,
     PIXEL_FORMAT_BGR8,
     PIXEL_FORMAT_R5G6B5,
-
     PIXEL_FORMAT_DEPTH,
-    
+    // more pixel formats to come...
     PIXEL_FORMAT_FORCE32 = 0x7fffffff
   };
 
@@ -41,14 +40,59 @@ public:
   PicoPixelClient(std::string client_id);
   ~PicoPixelClient();
 
-  bool StartConnection(bool start_receiver_thread = true);
-  bool StartConnectionToHost(std::string host_ip, int port, bool start_receiver_thread = true);
+  bool StartConnection();
+  bool StartConnectionToHost(std::string host_ip, int port);
+  void EnableAutoReconnectOnPicoPixelShutdown();
+  void DisableAutoReconnectOnPicoPixelShutdown();
   void EndConnection();
+
+  /*!
+      @return True if the socket connection to Pico Pixel as been established.
+  */
   bool Connected();
 
-  int AddMarker(std::string name, int use_count);
-  int AddMarker(std::string name, int use_count, unsigned int color);
+  /*!
+      Defines a uniquely named marker. If a marker with the same name already exists, the
+      function return -1;
+
+      @param name A unique name for the marker.
+      @param use_count The marker's counter value.
+      @return -1 if a marker with the same name already exists. A value >= 0 otherwise.
+  */
+  int CreateMarker(std::string name, int use_count);
+
+  /*!
+      Defines a uniquely named marker. If a marker with the same name already exists, the
+      function return -1;
+      Take a color as parameter. The color appears in pico Pixel UI next to the marker's name.
+
+      @param name A unique name for the marker.
+      @param use_count The marker's counter value.
+      @param use_count The marker's counter value.
+      @param color And hexadecimal color value.
+      @return -1 if a marker with the same name already exists. A value >= 0 otherwise.
+  */
+  int CreateMarker(std::string name, int use_count, unsigned int color);
+
+  /*!
+      Returns a marker's counter value. In the marker index is invalid, the function returns -1
+
+      @param index Marker's index.
+      @return A marker's counter value.
+  */
   int MarkerUseCount(int marker_index);
+
+  /*!
+      Resets a marker's counter value to 0.
+      @param Marker index.
+  */
+  void ResetMarker(int index);
+
+  /*!
+      Resets a marker's counter value to 0.
+      @param name Marker's name.
+  */
+  void ResetMarker(std::string name);
 
   void DeleteAllAddMarkers();
   void DeleteMarker(int index);

@@ -1,5 +1,3 @@
-//#define PICO_PIXEL_CLIENT_OPENGL
-
 #include "PicoPixelClient.h"
 #include "PicoPixelClientProtocol.h"
 #include <process.h>
@@ -16,9 +14,13 @@ struct PicoPixelClient::Impl
   Impl(PicoPixelClient* parent)
     : parent_(parent)
     , sock_(INVALID_SOCKET)
+    , port_(0)
     , receiver_thread_(0)
     , thread_id_(0)
     , markers_auto_sync_(true)
+    , client_side_connection_termination_(false)
+    , auto_reconnect_on_picopixel_shutdown_(false)
+    , trying_to_reconnect_to_pico_pixel_(false)
   {}
 
   bool Connected() const;
@@ -37,6 +39,8 @@ struct PicoPixelClient::Impl
   static DWORD WINAPI ReceiverThread(void* ptr);
 
   SOCKET sock_;
+  int port_;
+  std::string host_ip_;
   std::string picopixel_server_ip_;
   std::string client_id_;
   PicoPixelClient* parent_;
@@ -45,7 +49,9 @@ struct PicoPixelClient::Impl
 
   std::vector<Marker> markers_;
   bool markers_auto_sync_;
-
+  bool client_side_connection_termination_;
+  bool auto_reconnect_on_picopixel_shutdown_;
+  bool trying_to_reconnect_to_pico_pixel_;
   static int default_timeout_millisec_;
   static int trials_read_on_socket;
 };
@@ -131,95 +137,123 @@ DWORD PicoPixelClient::Impl::ReceiverThread(void* ptr)
   const int receive_buffer_size = 1024;
   char receive_buffer[receive_buffer_size];
 
-  while ((!connection_closed) && (!connection_dropped))
+  while (pixel_printf->impl_->client_side_connection_termination_ == false)
   {
-    // Blocking mode: Wait for event
-    bytes_read = 0;
-    int res = pixel_printf->impl_->RecvRaw(receive_buffer, receive_buffer_size, timeout, connection_closed, true);
-
-    if (res == SOCKET_ERROR)
+    while (pixel_printf->Connected() && (connection_closed == false) && (connection_dropped == false))
     {
-      connection_dropped = true;
-    }
+      // Blocking mode: Wait for event
+      bytes_read = 0;
+      int res = pixel_printf->impl_->RecvRaw(receive_buffer, receive_buffer_size, timeout, connection_closed, true);
 
-    if (connection_closed || connection_dropped)
-    {
-      // This thread is bout to be terminated.
-      if (connection_closed)
+      if (res == SOCKET_ERROR)
       {
-        printf("[PicoPixelClient::Impl::ReceiverThread] Connection closed.\n");
+        connection_dropped = true;
       }
-      else
+
+      if (connection_closed || connection_dropped)
       {
-        printf("[PicoPixelClient::Impl::ReceiverThread] Connection droped.\n");
-      }
-    }
-
-    if (res > 0)
-    {
-      PixelPrintfProtocol* pixel_printf_header = (PixelPrintfProtocol*)receive_buffer;
-
-      if ((pixel_printf_header->picomagic == PICO_PIXEL_NET_SIGNATURE) && (pixel_printf_header->payload_type == PackageType::PACKAGE_TYPE_MARKER))
-      {
-        MarkerDataHeader payload_markers;
-        pixel_printf->impl_->RecvRaw((char*)&payload_markers, sizeof(payload_markers), PIXEL_PRINTF_RECV_TIMEOUT, connection_closed);
-
-        for (int i = 0; i < payload_markers.marker_count; ++i)
+        // This thread is bout to be terminated.
+        if (connection_closed)
         {
-          int index = 0;
-          int use_count = 0;
-          int name_size = 0;
-          std::string name;
+          printf("[PicoPixelClient::Impl::ReceiverThread] Connection closed.\n");
+        }
+        else
+        {
+          printf("[PicoPixelClient::Impl::ReceiverThread] Connection droped.\n");
+        }
+      }
+
+      if (res > 0)
+      {
+        PixelPrintfProtocol* pixel_printf_header = (PixelPrintfProtocol*)receive_buffer;
+
+        if ((pixel_printf_header->picomagic == PICO_PIXEL_NET_SIGNATURE) && (pixel_printf_header->payload_type == PackageType::PACKAGE_TYPE_MARKER))
+        {
+          MarkerDataHeader payload_markers;
+          pixel_printf->impl_->RecvRaw((char*)&payload_markers, sizeof(payload_markers), PIXEL_PRINTF_RECV_TIMEOUT, connection_closed);
+
+          for (int i = 0; i < payload_markers.marker_count; ++i)
+          {
+            int index = 0;
+            int use_count = 0;
+            int name_size = 0;
+            std::string name;
           
-          if (pixel_printf->impl_->RecvInteger(&index, 1) <= 0)
-          {
-            pixel_printf->impl_->FlushRecvBuffer();
-            break;
-          }
-
-          if (pixel_printf->impl_->RecvInteger(&use_count, 1) <= 0)
-          {
-            pixel_printf->impl_->FlushRecvBuffer();
-            break;
-          }
-
-          if (pixel_printf->impl_->RecvInteger(&name_size, 1) <= 0)
-          {
-            pixel_printf->impl_->FlushRecvBuffer();
-            break;
-          }
-
-          char* str = new char[name_size];
-          if (pixel_printf->impl_->RecvString(str, name_size) <= 0)
-          {
-            delete [] str;
-            pixel_printf->impl_->FlushRecvBuffer();
-            break;
-          }
-          delete [] str;
-
-          if (index < (int)pixel_printf->impl_->markers_.size())
-          {
-            if (pixel_printf->impl_->markers_auto_sync_)
+            if (pixel_printf->impl_->RecvInteger(&index, 1) <= 0)
             {
-              pixel_printf->impl_->markers_[index].use_count_ = use_count;
-              pixel_printf->impl_->markers_[index].use_count_pico_pixel_update_ = -1;
+              pixel_printf->impl_->FlushRecvBuffer();
+              break;
             }
-            else
+
+            if (pixel_printf->impl_->RecvInteger(&use_count, 1) <= 0)
             {
-              pixel_printf->impl_->markers_[index].use_count_pico_pixel_update_ = use_count;
+              pixel_printf->impl_->FlushRecvBuffer();
+              break;
+            }
+
+            if (pixel_printf->impl_->RecvInteger(&name_size, 1) <= 0)
+            {
+              pixel_printf->impl_->FlushRecvBuffer();
+              break;
+            }
+
+            char* str = new char[name_size];
+            if (pixel_printf->impl_->RecvString(str, name_size) <= 0)
+            {
+              delete [] str;
+              pixel_printf->impl_->FlushRecvBuffer();
+              break;
+            }
+            delete [] str;
+
+            if (index < (int)pixel_printf->impl_->markers_.size())
+            {
+              if (pixel_printf->impl_->markers_auto_sync_)
+              {
+                pixel_printf->impl_->markers_[index].use_count_ = use_count;
+                pixel_printf->impl_->markers_[index].use_count_pico_pixel_update_ = -1;
+              }
+              else
+              {
+                pixel_printf->impl_->markers_[index].use_count_pico_pixel_update_ = use_count;
+              }
             }
           }
         }
+        else
+        {
+          pixel_printf->impl_->FlushRecvBuffer();
+        }
+        bytes_read = res;
       }
-      else
+    }
+
+    connection_closed = true;
+    connection_dropped = true;
+
+    if (pixel_printf->impl_->auto_reconnect_on_picopixel_shutdown_ && (pixel_printf->impl_->client_side_connection_termination_ == false))
+    {
+      pixel_printf->impl_->trying_to_reconnect_to_pico_pixel_ = true;
+
+      if (pixel_printf->impl_->host_ip_.empty())
       {
-        pixel_printf->impl_->FlushRecvBuffer();
+        pixel_printf->impl_->port_ = PICO_PIXEL_SERVER_PORT;
       }
-      bytes_read = res;
+
+      if (pixel_printf->StartConnectionToHost(pixel_printf->impl_->host_ip_, pixel_printf->impl_->port_))
+      {
+        pixel_printf->SendMarkersToPicoPixel();
+        connection_closed = false;
+        connection_dropped = false;
+        pixel_printf->impl_->trying_to_reconnect_to_pico_pixel_ = false;
+      }
+    }
+    else
+    {
+      break;
     }
   }
-
+  pixel_printf->impl_->trying_to_reconnect_to_pico_pixel_ = false;
   return 0;
 }
 
@@ -364,14 +398,17 @@ PicoPixelClient::~PicoPixelClient()
   }
 }
 
-bool PicoPixelClient::StartConnection(bool start_receiver_thread)
+bool PicoPixelClient::StartConnection()
 {
   // Will attempt to connect to local port.
-  return StartConnectionToHost(std::string(""), PICO_PIXEL_SERVER_PORT, start_receiver_thread);
+  return StartConnectionToHost(std::string(""), PICO_PIXEL_SERVER_PORT);
 }
 
-bool PicoPixelClient::StartConnectionToHost(std::string host_ip, int port, bool start_receiver_thread)
+bool PicoPixelClient::StartConnectionToHost(std::string host_ip, int port)
 {
+
+  impl_->client_side_connection_termination_ = false;
+
   if (Connected())
   {
     return true;
@@ -472,36 +509,61 @@ bool PicoPixelClient::StartConnectionToHost(std::string host_ip, int port, bool 
 
   if (ai == NULL)
   {
-    printf("[PicoPixelClient::PicoPixelClient] Connection failed.\n");
-    printf("[PicoPixelClient::PicoPixelClient] You need to launch Pico Pixel desktop application before running this program.\n");
+    if (impl_->trying_to_reconnect_to_pico_pixel_ == false)
+    {
+      printf("[PicoPixelClient::PicoPixelClient] Connection failed.\n");
+      printf("[PicoPixelClient::PicoPixelClient] You need to launch Pico Pixel desktop application before running this program.\n");
+    }
+    else
+    {
+      printf("[PicoPixelClient::PicoPixelClient] Attempting reconnection to Pico Pixel.\n");
+    }
     return false;
   }
 
   if (impl_->sock_ != INVALID_SOCKET)
   {
     impl_->HandShake(impl_->client_id_);
-  }
 
-  if (start_receiver_thread)
-  {
-    impl_->receiver_thread_ = ::CreateThread(NULL,
-      0,
-      PicoPixelClient::Impl::ReceiverThread,
-      this,
-      CREATE_SUSPENDED,
-      &impl_->thread_id_);
+    impl_->host_ip_ = host_name;
+    impl_->port_ = port;
 
-    if (impl_->receiver_thread_ != NULL)
+    if (impl_->trying_to_reconnect_to_pico_pixel_ == false)
     {
-      ResumeThread(impl_->receiver_thread_);
-      return true;
+      impl_->receiver_thread_ = ::CreateThread(NULL,
+        0,
+        PicoPixelClient::Impl::ReceiverThread,
+        this,
+        CREATE_SUSPENDED,
+        &impl_->thread_id_);
+
+      if (impl_->receiver_thread_ != NULL)
+      {
+        ResumeThread(impl_->receiver_thread_);
+        return true;
+      }
     }
   }
+
   return true;
+}
+
+void PicoPixelClient::EnableAutoReconnectOnPicoPixelShutdown()
+{
+  impl_->auto_reconnect_on_picopixel_shutdown_ = true;
+}
+
+void PicoPixelClient::DisableAutoReconnectOnPicoPixelShutdown()
+{
+  impl_->auto_reconnect_on_picopixel_shutdown_ = false;
 }
 
 void PicoPixelClient::EndConnection()
 {
+  impl_->client_side_connection_termination_ = true;
+  impl_->host_ip_.clear();
+  impl_->port_ = 0;
+
   if (impl_->sock_ == INVALID_SOCKET)
     return;
 
@@ -514,7 +576,10 @@ void PicoPixelClient::EndConnection()
 
   closesocket(impl_->sock_);
   impl_->sock_ = INVALID_SOCKET;
+
+#if WIN32
   WSACleanup();
+#endif
 }
 
 bool PicoPixelClient::Connected()
@@ -522,19 +587,19 @@ bool PicoPixelClient::Connected()
   return impl_->sock_ != INVALID_SOCKET;
 }
 
-int PicoPixelClient::AddMarker(std::string name, int use_count)
+int PicoPixelClient::CreateMarker(std::string name, int use_count)
 {
-  return AddMarker(name, use_count, PICO_PIXEL_MARKER_COLOR);
+  return CreateMarker(name, use_count, PICO_PIXEL_MARKER_COLOR);
 }
 
-int PicoPixelClient::AddMarker(std::string name, int use_count, unsigned int color)
+int PicoPixelClient::CreateMarker(std::string name, int use_count, unsigned int color)
 {
   std::vector<Marker>::iterator it;
   for (it = impl_->markers_.begin(); it != impl_->markers_.end(); ++it)
   {
     if ((*it).name_ == name)
     {
-      std::cout << "[PicoPixelClient::AddMarker] There is already a marker with name " << name << std::endl;
+      std::cout << "[PicoPixelClient::CreateMarker] There is already a marker with name " << name << std::endl;
       return -1;
     }
   }
@@ -556,6 +621,34 @@ int PicoPixelClient::MarkerUseCount(int marker_index)
   }
 
   return impl_->markers_[marker_index].use_count_;
+}
+
+
+void PicoPixelClient::ResetMarker(int index)
+{
+  if (index < 0)
+    return;
+
+  if (index >= (int)impl_->markers_.size())
+    return;
+
+  impl_->markers_[index].use_count_ = 0;
+}
+
+void PicoPixelClient::ResetMarker(std::string name)
+{
+  if (name.empty())
+    return;
+
+  std::vector<Marker>::iterator it;
+  for (it = impl_->markers_.begin(); it != impl_->markers_.end(); ++it)
+  {
+    if ((*it).name_ == name)
+    {
+      (*it).use_count_ = 0;
+      return;
+    }
+  }
 }
 
 void PicoPixelClient::DeleteAllAddMarkers()
